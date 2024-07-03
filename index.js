@@ -31,7 +31,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('quitGame', function () {
-    quitGame(socket.room)
+    quitWaiting(socket);
+    quitGame(socket.room, socket.id);
   });
 
   socket.on('disconnect', (reason) => {
@@ -77,7 +78,7 @@ io.on('connection', (socket) => {
 
   socket.on('generate', function () {
 
-    nameOfRoom = makeid(6);
+    let nameOfRoom = makeid(6);
     console.log(nameOfRoom + " : is created ");
 
     lobbies[nameOfRoom] = { "numbOfPlayers": 0 };
@@ -127,6 +128,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('enterGame', function () {
+    if (!lobbies[socket.room]) { return; }
     if (isPlayer("player1", socket)) {
       lobbies[socket.room].player1.enteredGame = true;
     } else if (isPlayer("player2", socket)) {
@@ -172,6 +174,7 @@ io.on('connection', (socket) => {
 
   socket.on('ready', function (x, y) {
 
+    if (!lobbies[socket.room]) { return; }
     if (socket.id == lobbies[socket.room].player1.id) {
       console.log("player1 ready");
       lobbies[socket.room].player1.ready = true;
@@ -196,6 +199,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('turnRight', function () {
+    if (!lobbies[socket.room]) { return; }
     let player;
 
     if (lobbies[socket.room].player1.id == socket.id) {
@@ -208,7 +212,7 @@ io.on('connection', (socket) => {
 
     let orientation = lobbies[socket.room][player].variables[last][3];
 
-    orientation += 90
+    orientation += 90;
     if (orientation == 270) {
       orientation = -90;
     }
@@ -224,6 +228,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('turnLeft', function () {
+    if (!lobbies[socket.room]) { return; }
     let player;
 
     if (lobbies[socket.room].player1.id == socket.id) {
@@ -258,7 +263,7 @@ function makeid(length) {
   let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let charactersLength = characters.length;
 
-  while (lobbies[result] || result == '') {
+  while (lobbies[result] || result === '') {
     result = '';
     for (let i = 0; i < length; i++) {
       result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -269,17 +274,17 @@ function makeid(length) {
 
 function forcedGameStart(room) {
   setTimeout(() => {
-    if (lobbies[room] != null) {
+    if (lobbies[room] !== null) {
       if (!lobbies[room].gameStarted && lobbies[room].numbOfPlayers == 2) {
-        console.log("game force start")
+        console.log("game force start");
         if (!lobbies[room].player1.ready) {
           lobbies[room].player1.x_start = defaultStartingX;
-          lobbies[room].player1.y_start = 1 - lobbies[room].player1.side
+          lobbies[room].player1.y_start = 1 - lobbies[room].player1.side;
         }
 
         if (!lobbies[room].player2.ready) {
           lobbies[room].player2.x_start = defaultStartingX;
-          lobbies[room].player2.y_start = 1 - lobbies[room].player2.side
+          lobbies[room].player2.y_start = 1 - lobbies[room].player2.side;
         }
 
         io.to(room).emit("startGame");
@@ -306,7 +311,7 @@ function initVariables(room) {
 
 function forcedRoundStart(room) {
   setTimeout(() => {
-    if (lobbies[room] != null) {
+    if (lobbies[room] !== null) {
       if (!lobbies[room].gameStarted) {
 
         io.to(room).emit("startGame");
@@ -397,9 +402,10 @@ function startingRectangle(x, y) {
 }
 
 function playing(room) {
+  if (!lobbies[room]) { return; }
   if (!lobbies[room].finished) {
     setTimeout(() => {
-      if (lobbies[room] != null) {
+      if (lobbies[room] !== null) {
 
         const player1Last = lobbies[room].player1.variables.length - 1;
         const player2Last = lobbies[room].player2.variables.length - 1;
@@ -423,10 +429,10 @@ function checking(room) {
   let player2Won = false;
 
   const player1Variables = lobbies[room].player1.variables;
-  const player1Checker = getChecker(player1Variables[player1Variables.length - 1])
+  const player1Checker = getChecker(player1Variables[player1Variables.length - 1]);
 
   const player2Variables = lobbies[room].player2.variables;
-  const player2Checker = getChecker(player2Variables[player2Variables.length - 1])
+  const player2Checker = getChecker(player2Variables[player2Variables.length - 1]);
 
   for (let i = 0; i < player1Variables.length; i++) {
 
@@ -447,7 +453,7 @@ function checking(room) {
 
   for (let i = 0; i < player2Variables.length; i++) {
 
-    const rect = getRect(player2Variables[i]);
+    rect = getRect(player2Variables[i]);
     if (intersects(player2Checker, rect) && i < player2Variables.length - 1) {
 
       if (!lobbies[room].player2.bumpToSelf) {
@@ -599,41 +605,53 @@ function whenGameFinished(room) {
 
 function quitWaiting(socket) {
   console.log('user quit lobby');
-  lobbies[socket.room].numbOfPlayers -= 1;
-  if (isPlayer('player1', socket)) {
-    delete lobbies[socket.room].player1.id;
-  } else if (isPlayer('player2', socket)) {
-    delete lobbies[socket.room].player2.id;
-  }
-  if (lobbies[socket.room].numbOfPlayers === 0) {
-    deleteIfRandom(socket.room);
-    delete lobbies[socket.room];
-  } else {
-    if (lobbies[socket.room].gameStarted) {
-      socket.to(socket.room).emit('gameEnded');
-      lobbies[socket.room].finished = true;
+  if(lobbies[socket.room]){
+    lobbies[socket.room].numbOfPlayers -= 1;
+    if (isPlayer('player1', socket)) {
+      delete lobbies[socket.room].player1.id;
+    } else if (isPlayer('player2', socket)) {
+      delete lobbies[socket.room].player2.id;
+    }
+    if (lobbies[socket.room].numbOfPlayers === 0) {
+      deleteIfRandom(socket.room);
       delete lobbies[socket.room];
     } else {
-      socket.to(socket.room).emit('canPlay', false);
-      if (lobbies[socket.room].random) {
-        randoms.push([lobbies[socket.room].levelRange, socket.room]);
+      if (lobbies[socket.room].gameStarted) {
+        socket.to(socket.room).emit('gameEnded');
+        lobbies[socket.room].finished = true;
+        delete lobbies[socket.room];
+      } else {
+        socket.to(socket.room).emit('canPlay', false);
+        if (lobbies[socket.room].random) {
+          randoms.push([lobbies[socket.room].levelRange, socket.room]);
+        }
       }
     }
+    socket.leave(socket.room);
   }
-  socket.leave(socket.room);
 }
 
-function quitGame(room) {
+function quitGame(room, socketId) {
   console.log('user quit game');
-  io.to(room).emit('gameEnded');
-  lobbies[room].finished = true;
+  if(lobbies[room]){
+    lobbies[room].finished = true;
 
-  const socketPlayer1 = io.of("/").connected[lobbies[room].player1.id];
-  const socketPlayer2 = io.of("/").connected[lobbies[room].player2.id];
-  socketPlayer1.leave(room);
-  socketPlayer2.leave(room);
+    const socketPlayer1 = io.of("/").connected[lobbies[room].player1.id];
+    const socketPlayer2 = io.of("/").connected[lobbies[room].player2.id];
 
-  delete lobbies[room];
+    if (!socketPlayer1 || socketId == socketPlayer1.id) {
+      io.to(socketPlayer2.id).emit('gameEnded');
+      io.to(socketPlayer2.id).emit('gameEndedWaiting');
+    }else{
+      io.to(socketPlayer1.id).emit('gameEnded');
+      io.to(socketPlayer1.id).emit('gameEndedWaiting');
+    }
+
+    if(socketPlayer1){socketPlayer1.leave(room);}
+    if(socketPlayer2){socketPlayer2.leave(room);}
+
+    delete lobbies[room];
+  }
 }
 
 function deleteIfRandom(room) {
