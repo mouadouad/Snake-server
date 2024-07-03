@@ -1,4 +1,5 @@
 const express = require('express');
+const { cp } = require('fs');
 const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
@@ -32,7 +33,7 @@ io.on('connection', (socket) => {
 
   socket.on('quitGame', function () {
     quitWaiting(socket);
-    quitGame(socket.room, socket.id);
+    quitGame(socket.room);
   });
 
   socket.on('disconnect', (reason) => {
@@ -175,7 +176,7 @@ io.on('connection', (socket) => {
   socket.on('ready', function (x, y) {
 
     if (!lobbies[socket.room]) { return; }
-    if (socket.id == lobbies[socket.room].player1.id) {
+    if (isPlayer("player1", socket)) {
       console.log("player1 ready");
       lobbies[socket.room].player1.ready = true;
       lobbies[socket.room].player1.x_start = x;
@@ -188,7 +189,6 @@ io.on('connection', (socket) => {
     }
 
     if (lobbies[socket.room].player1.ready && lobbies[socket.room].player2.ready) {
-
       io.to(socket.room).emit("startGame");
       lobbies[socket.room].gameStarted = true;
 
@@ -274,7 +274,7 @@ function makeid(length) {
 
 function forcedGameStart(room) {
   setTimeout(() => {
-    if (lobbies[room] !== null) {
+    if (lobbies[room]) {
       if (!lobbies[room].gameStarted && lobbies[room].numbOfPlayers == 2) {
         console.log("game force start");
         if (!lobbies[room].player1.ready) {
@@ -311,7 +311,7 @@ function initVariables(room) {
 
 function forcedRoundStart(room) {
   setTimeout(() => {
-    if (lobbies[room] !== null) {
+    if (lobbies[room]) {
       if (!lobbies[room].gameStarted) {
 
         io.to(room).emit("startGame");
@@ -405,8 +405,7 @@ function playing(room) {
   if (!lobbies[room]) { return; }
   if (!lobbies[room].finished) {
     setTimeout(() => {
-      if (lobbies[room] !== null) {
-
+      if (lobbies[room]) {
         const player1Last = lobbies[room].player1.variables.length - 1;
         const player2Last = lobbies[room].player2.variables.length - 1;
 
@@ -631,7 +630,7 @@ function quitWaiting(socket) {
   }
 }
 
-function quitGame(room, socketId) {
+function quitGame(room) {
   console.log('user quit game');
   if(lobbies[room]){
     lobbies[room].finished = true;
@@ -639,13 +638,8 @@ function quitGame(room, socketId) {
     const socketPlayer1 = io.of("/").connected[lobbies[room].player1.id];
     const socketPlayer2 = io.of("/").connected[lobbies[room].player2.id];
 
-    if (!socketPlayer1 || socketId == socketPlayer1.id) {
-      io.to(socketPlayer2.id).emit('gameEnded');
-      io.to(socketPlayer2.id).emit('gameEndedWaiting');
-    }else{
-      io.to(socketPlayer1.id).emit('gameEnded');
-      io.to(socketPlayer1.id).emit('gameEndedWaiting');
-    }
+    io.to(room).emit('gameEnded');
+    io.to(room).emit('gameEndedWaiting');
 
     if(socketPlayer1){socketPlayer1.leave(room);}
     if(socketPlayer2){socketPlayer2.leave(room);}
