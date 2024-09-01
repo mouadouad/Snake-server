@@ -1,8 +1,12 @@
 const express = require('express');
-const { cp } = require('fs');
 const app = express();
 const server = require('http').createServer(app);
-const io = require('socket.io')(server);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: "*",  // Allow all origins - adjust for security in production
+    methods: ["GET", "POST"]
+  }
+});
 const port = process.env.PORT || 3000;
 let lobbies = {};
 let randoms = [];
