@@ -11,13 +11,15 @@ const port = process.env.PORT || 3000;
 let lobbies = {};
 let randoms = [];
 const width = 1080;
-const height = 1770;
+const height = 1600;
+const snakeWidth = 30;
+const barWidth = 20;
 const MAX_TIME_START_GAME = 10000;
 const MAX_TIME_START_ROUND = 5000;
-const leftEdge = [0, 0, 20, 1600];
-const rigthEdge = [width - 20, 0, width, 1600];
-const topEdge = [0, 0, width, 20];
-const botEdge = [0, 1580, width, 1600];
+const leftEdge = [0, 0, barWidth, height];
+const rigthEdge = [height - barWidth, 0, width, height];
+const topEdge = [0, 0, width, barWidth];
+const botEdge = [0, height- barWidth, width, height];
 const defaultStartingX = 0.5;
 
 server.listen(port, () => {
@@ -224,8 +226,8 @@ io.on('connection', (socket) => {
     let rectangle = [];
 
     rectangle[0] = lobbies[socket.room][player].variables[last][1];
-    rectangle[1] = -lobbies[socket.room][player].variables[last][0] - 30;
-    rectangle[2] = -lobbies[socket.room][player].variables[last][0] - 30;
+    rectangle[1] = -lobbies[socket.room][player].variables[last][0] - snakeWidth;
+    rectangle[2] = -lobbies[socket.room][player].variables[last][0] - snakeWidth;
     rectangle[3] = orientation;
 
     lobbies[socket.room][player].variables.push(rectangle);
@@ -252,7 +254,7 @@ io.on('connection', (socket) => {
 
     let rectangle = [];
 
-    rectangle[0] = -lobbies[socket.room][player].variables[last][1] - 30;
+    rectangle[0] = -lobbies[socket.room][player].variables[last][1] - snakeWidth;
     rectangle[1] = lobbies[socket.room][player].variables[last][0];
     rectangle[2] = lobbies[socket.room][player].variables[last][0];
     rectangle[3] = orientation;
@@ -346,42 +348,42 @@ function startingRectangle(x, y) {
 
   if (y === 0) {
     angle = 180;
-    if (x <= 20 + 30) {
-      x = 20 + 1 + 30;
+    if (x <= barWidth + snakeWidth) {
+      x = barWidth + 1 + snakeWidth;
     }
-    if (x >= 1060) {
-      x = 1060 - 1;
+    if (x >= width- barWidth) {
+      x = width - barWidth - 1;
     }
   } else if (x === 0) {
     angle = 90;
-    if (y >= 1580 - 30) {
-      y = 1580 - 1 - 30;
+    if (y >= height- barWidth - snakeWidth) {
+      y = height- barWidth - 1 - snakeWidth;
     }
-    if (y <= 20) {
-      y = 20 + 1;
+    if (y <= barWidth) {
+      y = barWidth + 1;
     }
   } else if (x == width) {
     angle = -90;
-    if (y >= 1580) {
-      y = 1580 - 1;
+    if (y >= height- barWidth) {
+      y = height- barWidth - 1;
     }
-    if (y <= 20 + 30) {
-      y = 20 + 1 + 30;
+    if (y <= barWidth + snakeWidth) {
+      y = barWidth + 1 + snakeWidth;
     }
   } else {
-    if (x <= 20) {
-      x = 20 + 1;
+    if (x <= barWidth) {
+      x = barWidth + 1;
     }
-    if (x >= 1060 - 30) {
-      x = 1060 - 1 - 30;
+    if (x >= width - barWidth - snakeWidth) {
+      x = width - barWidth - 1 - snakeWidth;
     }
   }
 
   switch (angle) {
     case 0:
       rectangle[0] = x;
-      rectangle[1] = 1600 - 10;
-      rectangle[2] = 1600;
+      rectangle[1] = height - 10;
+      rectangle[2] = height;
       break;
     case 180:
       rectangle[0] = -x;
@@ -404,30 +406,29 @@ function startingRectangle(x, y) {
 
   return rectangle;
 }
-
 function playing(room) {
   if (!lobbies[room]) { return; }
-  if (!lobbies[room].finished) {
-    setTimeout(() => {
-      if (lobbies[room]) {
-        const player1Last = lobbies[room].player1.variables.length - 1;
-        const player2Last = lobbies[room].player2.variables.length - 1;
+  if (lobbies[room].finished) { return; }
+  setTimeout(() => {
+    if (lobbies[room]) {
+      const player1Last = lobbies[room].player1.variables.length - 1;
+      const player2Last = lobbies[room].player2.variables.length - 1;
 
-        lobbies[room].player1.variables[player1Last][1] -= 2;
-        lobbies[room].player2.variables[player2Last][1] -= 2;
+      lobbies[room].player1.variables[player1Last][1] -= 2;
+      lobbies[room].player2.variables[player2Last][1] -= 2;
 
-        io.to(lobbies[room].player1.id).emit('update', [lobbies[room].player1, lobbies[room].player2]);
-        io.to(lobbies[room].player2.id).emit('update', [lobbies[room].player2, lobbies[room].player1]);
+      io.to(lobbies[room].player1.id).emit('update', [lobbies[room].player1, lobbies[room].player2]);
+      io.to(lobbies[room].player2.id).emit('update', [lobbies[room].player2, lobbies[room].player1]);
 
-        checking(room);
-        playing(room);
-      }
-    }, 10);
-  }
+      checking(room);
+      playing(room);
+    }
+  }, 10);
+  
 }
 
 function checking(room) {
-
+  if (!lobbies[room]) { return; }
   let player1Won = false;
   let player2Won = false;
 
@@ -511,7 +512,7 @@ function hitBorder(checker, rectangles) {
   const last = rectangles.length - 1;
   const lastRectangleLength = rectangles[last][2] - rectangles[last][1];
 
-  return Hitborder && (lastRectangleLength > 20 || rectangles.length > 1);
+  return Hitborder && (lastRectangleLength > barWidth || rectangles.length > 1);
 }
 
 function removeRects(rectangles, i, checker) {
@@ -540,16 +541,16 @@ function getChecker(rectangle) {
 
   switch (rectangle[3]) {
     case 90:
-      checker = [-top - 1, left, -top, left + 30];
+      checker = [-top - 1, left, -top, left + snakeWidth];
       break;
     case -90:
-      checker = [top, -left - 30, top - 1, -left];
+      checker = [top, -left - snakeWidth, top - 1, -left];
       break;
     case 180:
-      checker = [-left - 30, -top - 1, -left, -top];
+      checker = [-left - snakeWidth, -top - 1, -left, -top];
       break;
     default:
-      checker = [left, top, left + 30, top + 1];
+      checker = [left, top, left + snakeWidth, top + 1];
       break;
   }
 
@@ -564,16 +565,16 @@ function getRect(rectangle) {
 
   switch (rectangle[3]) {
     case 90:
-      rect = [-bot, left, -top, left + 30];
+      rect = [-bot, left, -top, left + snakeWidth];
       break;
     case -90:
-      rect = [top, -left - 30, bot, -left];
+      rect = [top, -left - snakeWidth, bot, -left];
       break;
     case 180:
-      rect = [-left - 30, -bot, -left, -top];
+      rect = [-left - snakeWidth, -bot, -left, -top];
       break;
     default:
-      rect = [left, top, left + 30, bot];
+      rect = [left, top, left + snakeWidth, bot];
       break;
   }
 
@@ -586,18 +587,19 @@ function isPlayer(player, socket) {
 
 function whenGameFinished(room) {
   lobbies[room].gameStarted = false;
-  setTimeout(() => {
+  setTimeout(async () => {
     if (!lobbies[room]) { return; }
+    if(lobbies[room].gameStarted) { return; }
     lobbies[room].round += 1;
     const wonTwoRounds = Math.abs(lobbies[room].player1.Rwon - lobbies[room].player2.Rwon) == 2;
 
     if (lobbies[room].round > 3 || wonTwoRounds) {
       io.to(lobbies[room].player1.id).emit('gameFinished', lobbies[room].player1.Rwon, lobbies[room].player2.Rwon);
       io.to(lobbies[room].player2.id).emit('gameFinished', lobbies[room].player2.Rwon, lobbies[room].player1.Rwon);
-      const socketPlayer1 = io.of("/").connected[lobbies[room].player1.id];
-      const socketPlayer2 = io.of("/").connected[lobbies[room].player2.id];
-      socketPlayer1.leave(room);
-      socketPlayer2.leave(room);
+      const sockets = await io.in(room).fetchSockets();
+      sockets.forEach(socket => {
+        socket.leave(room)
+      });
       delete lobbies[room];
     } else {
       io.sockets.to(room).emit('roundFinished', lobbies[room].round);
@@ -608,56 +610,50 @@ function whenGameFinished(room) {
 
 function quitWaiting(socket) {
   console.log('user quit lobby');
-  if(lobbies[socket.room]){
-    lobbies[socket.room].numbOfPlayers -= 1;
-    if (isPlayer('player1', socket)) {
-      delete lobbies[socket.room].player1.id;
-    } else if (isPlayer('player2', socket)) {
-      delete lobbies[socket.room].player2.id;
-    }
-    if (lobbies[socket.room].numbOfPlayers === 0) {
-      deleteIfRandom(socket.room);
+  if (!lobbies[socket.room]) { return; }
+  lobbies[socket.room].numbOfPlayers -= 1;
+  if (isPlayer('player1', socket)) {
+    delete lobbies[socket.room].player1.id;
+  } else if (isPlayer('player2', socket)) {
+    delete lobbies[socket.room].player2.id;
+  }
+  if (lobbies[socket.room].numbOfPlayers === 0) {
+    deleteIfRandom(socket.room);
+    delete lobbies[socket.room];
+  } else {
+    if (lobbies[socket.room].gameStarted) {
+      socket.to(socket.room).emit('gameEnded');
+      lobbies[socket.room].finished = true;
       delete lobbies[socket.room];
     } else {
-      if (lobbies[socket.room].gameStarted) {
-        socket.to(socket.room).emit('gameEnded');
-        lobbies[socket.room].finished = true;
-        delete lobbies[socket.room];
-      } else {
-        socket.to(socket.room).emit('canPlay', false);
-        if (lobbies[socket.room].random) {
-          randoms.push([lobbies[socket.room].levelRange, socket.room]);
-        }
+      socket.to(socket.room).emit('canPlay', false);
+      if (lobbies[socket.room].random) {
+        randoms.push([lobbies[socket.room].levelRange, socket.room]);
       }
     }
-    socket.leave(socket.room);
   }
+  socket.leave(socket.room);
+  
 }
 
-function quitGame(room) {
+async function quitGame(room) {
   console.log('user quit game');
-  if(lobbies[room]){
+  if (!lobbies[room]) { return; }
     lobbies[room].finished = true;
 
-    const socketPlayer1 = io.of("/").connected[lobbies[room].player1.id];
-    const socketPlayer2 = io.of("/").connected[lobbies[room].player2.id];
-
-    io.to(room).emit('gameEnded');
-    io.to(room).emit('gameEndedWaiting');
-
-    if(socketPlayer1){socketPlayer1.leave(room);}
-    if(socketPlayer2){socketPlayer2.leave(room);}
-
+    const sockets = await io.in(room).fetchSockets();
+      sockets.forEach(socket => {
+        socket.leave(room)
+      });
     delete lobbies[room];
-  }
 }
 
 function deleteIfRandom(room) {
-  if (lobbies[room].random) {
-    for (let i = 0; i < randoms.length; i++) {
-      if (randoms[i][1] == room) {
-        randoms.splice(i, 1);
-      }
+  if (!lobbies[room].random) { return; }
+  for (let i = 0; i < randoms.length; i++) {
+    if (randoms[i][1] == room) {
+      randoms.splice(i, 1);
     }
   }
 }
+
