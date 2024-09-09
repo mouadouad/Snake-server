@@ -284,13 +284,13 @@ function forcedGameStart(room) {
       if (!lobbies[room].gameStarted && lobbies[room].numbOfPlayers == 2) {
         console.log("game force start");
         if (!lobbies[room].player1.ready) {
-          lobbies[room].player1.x_start = defaultStartingX;
-          lobbies[room].player1.y_start = 1 - lobbies[room].player1.side;
+          lobbies[room].player1.x_start = defaultStartingX * width;
+          lobbies[room].player1.y_start = (1 - lobbies[room].player1.side) * height;
         }
 
         if (!lobbies[room].player2.ready) {
-          lobbies[room].player2.x_start = defaultStartingX;
-          lobbies[room].player2.y_start = 1 - lobbies[room].player2.side;
+          lobbies[room].player2.x_start = defaultStartingX * width;
+          lobbies[room].player2.y_start = (1 - lobbies[room].player2.side) * height;
         }
 
         io.to(room).emit("startGame");
@@ -333,16 +333,18 @@ function forcedRoundStart(room) {
 }
 
 function startingPosition(player1, player2) {
-  player1Rectangle = startingRectangle(player1.x_start * width, player1.y_start * height);
+  player1Rectangle = startingRectangle(player1.x_start, player1.y_start);
 
   player1.variables.push(player1Rectangle);
 
-  player2Rectangle = startingRectangle(player2.x_start * width, player2.y_start * height);
+  player2Rectangle = startingRectangle(player2.x_start, player2.y_start);
 
   player2.variables.push(player2Rectangle);
 }
 
 function startingRectangle(x, y) {
+  console.log(x)
+  console.log(y)
   let angle = 0;
   let rectangle = [];
 
@@ -588,6 +590,7 @@ function isPlayer(player, socket) {
 function whenGameFinished(room) {
   lobbies[room].gameStarted = false;
   setTimeout(async () => {
+    console.log(lobbies[room].gameStarted)
     if (!lobbies[room]) { return; }
     if(lobbies[room].gameStarted) { return; }
     lobbies[room].round += 1;
